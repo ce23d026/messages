@@ -1,32 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Send Your Wishes 💌</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <title>Wedding Wall</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
       background-color: #222;
       color: white;
-      text-align: center;
-      padding: 40px 20px;
+      overflow-x: hidden;
+      position: relative;
+      height: 100vh;
     }
-    h1 {
-      color: #ffd6e0;
-    }
-    form {
+    .container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
       background-color: #333;
       padding: 20px;
       border-radius: 10px;
-      max-width: 400px;
-      margin: 0 auto;
+      max-width: 300px;
+      z-index: 1000;
+    }
+    h1 {
+      color: #ffd6e0;
+      margin-bottom: 10px;
+      font-size: 1.2em;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
     }
     input, textarea {
       width: 100%;
-      margin: 10px 0;
-      padding: 10px;
+      margin: 5px 0;
+      padding: 8px;
       border: none;
       border-radius: 5px;
     }
@@ -38,27 +48,52 @@
       background-color: #ff69b4;
       color: white;
       border: none;
-      padding: 12px 20px;
+      padding: 10px;
       border-radius: 8px;
       font-size: 1em;
       cursor: pointer;
       margin-top: 10px;
     }
-    .success {
-      margin-top: 15px;
-      color: lightgreen;
+    .live-reactions {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      flex-direction: column-reverse;
+      align-items: center;
+      max-height: 100vh;
+      overflow-y: auto;
+      padding: 20px;
+    }
+    .reaction {
+      background-color: rgba(255,105,180,0.9);
+      color: #fff;
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 8px;
+      animation: floatUp 12s linear infinite;
+    }
+    @keyframes floatUp {
+      0% { transform: translateY(100%); opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { transform: translateY(-100%); opacity: 0; }
     }
   </style>
 </head>
 <body>
-  <h1>Send Your Wishes to the Couple 💑</h1>
-  <form id="wishForm">
-    <input type="text" name="name" placeholder="Your Name (optional)" />
-    <textarea name="message" placeholder="Your Message" required></textarea>
-    <input type="file" name="media" accept="image/*,video/*,audio/*" capture />
-    <button type="submit">Send Wish</button>
-    <div class="success" id="successMsg" style="display:none;">Thank you for your wish! 💖</div>
-  </form>
+  <div class="live-reactions" id="liveReactions"></div>
+
+  <div class="container">
+    <h1>Send Your Wishes to the Couple 💑</h1>
+    <form id="wishForm">
+      <input type="text" name="name" placeholder="Your Name (optional)">
+      <textarea name="message" placeholder="Your Message" required></textarea>
+      <input type="file" name="media" accept="image/*,video/*,audio/*" capture>
+      <button type="submit">Send Wish</button>
+    </form>
+  </div>
 
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -82,13 +117,14 @@
     const storage = firebase.storage();
 
     const form = document.getElementById("wishForm");
-    const successMsg = document.getElementById("successMsg");
+    const reactions = document.getElementById("liveReactions");
 
-    form.addEventListener("submit", async function (event) {
+    form.addEventListener("submit", async function(event) {
       event.preventDefault();
       const name = form.name.value || "Anonymous";
       const message = form.message.value;
       const file = form.media.files[0];
+
       let mediaUrl = "";
 
       if (file) {
@@ -104,10 +140,27 @@
         timestamp: Date.now()
       };
 
-      await db.ref("wishes").push(newWish);
+      db.ref("wishes").push(newWish);
       form.reset();
-      successMsg.style.display = "block";
-      setTimeout(() => successMsg.style.display = "none", 5000);
+    });
+
+    db.ref("wishes").on("child_added", (snapshot) => {
+      const data = snapshot.val();
+      const div = document.createElement("div");
+      div.className = "reaction";
+      let html = `<strong>${data.name}</strong>: ${data.message}`;
+      if (data.mediaUrl) {
+        const isImg = data.mediaUrl.match(/\.(jpeg|jpg|gif|png)/);
+        const isAudio = data.mediaUrl.match(/\.(mp3|wav)/);
+        const isVideo = data.mediaUrl.match(/\.(mp4|webm)/);
+
+        if (isImg) html += `<br><img src="${data.mediaUrl}" style="max-width:150px; border-radius:6px;">`;
+        else if (isAudio) html += `<br><audio controls src="${data.mediaUrl}"></audio>`;
+        else if (isVideo) html += `<br><video controls width="150"><source src="${data.mediaUrl}"></video>`;
+        else html += `<br><a href="${data.mediaUrl}" target="_blank">View Attachment</a>`;
+      }
+      div.innerHTML = html;
+      reactions.appendChild(div);
     });
   </script>
 </body>
