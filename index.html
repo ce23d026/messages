@@ -33,7 +33,7 @@
       display: flex;
       flex-direction: column;
     }
-    input, textarea, select {
+    input, textarea {
       width: 100%;
       margin: 5px 0;
       padding: 8px;
@@ -68,29 +68,18 @@
       bottom: 0;
       left: 50%;
       transform: translateX(-50%);
-      background-color: rgba(255,105,180,0.9);
+      background-color: rgba(255, 105, 180, 0.9);
       color: #fff;
       padding: 10px;
       border-radius: 8px;
       animation: floatUp 20s linear forwards;
       opacity: 0;
       z-index: 999;
-      font-size: 1.1em;
     }
     @keyframes floatUp {
       0% { transform: translate(-50%, 0); opacity: 1; }
       90% { opacity: 1; }
       100% { transform: translate(-50%, -100vh); opacity: 0; }
-    }
-    .emoji-selector {
-      display: flex;
-      justify-content: space-between;
-      margin: 5px 0;
-    }
-    .emoji-selector span {
-      cursor: pointer;
-      font-size: 1.2em;
-      padding: 4px;
     }
   </style>
 </head>
@@ -102,18 +91,12 @@
     <form id="wishForm">
       <input type="text" name="name" placeholder="Your Name (optional)" />
       <textarea name="message" placeholder="Your Message" required></textarea>
-
-      <!-- Emoji Selection -->
-      <div class="emoji-selector" id="emojiSelector">
-        <span>❤️</span><span>🎉</span><span>🌸</span><span>😍</span><span>🥰</span>
-      </div>
-
       <input type="file" name="media" accept="image/*,video/*,audio/*" capture />
       <button type="submit">Send Wish</button>
     </form>
   </div>
 
-  <!-- Firebase SDK -->
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
@@ -122,12 +105,11 @@
     const firebaseConfig = {
       apiKey: "AIzaSyBxsCIix7yI1HbmcM5iePoHzM0S8-quEG0",
       authDomain: "wedding-dashboard-3b7f9.firebaseapp.com",
+      databaseURL: "https://wedding-dashboard-3b7f9-default-rtdb.firebaseio.com",
       projectId: "wedding-dashboard-3b7f9",
       storageBucket: "wedding-dashboard-3b7f9.appspot.com",
       messagingSenderId: "208139653830",
-      appId: "1:208139653830:web:d5f846eb8f1d1497797dc7",
-      measurementId: "G-6WND4F2LNQ",
-      databaseURL: "https://wedding-dashboard-3b7f9-default-rtdb.firebaseio.com"
+      appId: "1:208139653830:web:d5f846eb8f1d1497797dc7"
     };
 
     firebase.initializeApp(firebaseConfig);
@@ -136,16 +118,6 @@
 
     const form = document.getElementById("wishForm");
     const reactions = document.getElementById("liveReactions");
-
-    // Emoji selector logic
-    const emojiSelector = document.getElementById("emojiSelector");
-    const messageBox = form.message;
-    emojiSelector.addEventListener("click", (e) => {
-      if (e.target.tagName === "SPAN") {
-        messageBox.value += e.target.textContent;
-        messageBox.focus();
-      }
-    });
 
     form.addEventListener("submit", async function (event) {
       event.preventDefault();
@@ -168,9 +140,8 @@
         timestamp: Date.now()
       };
 
-      await db.ref("wishes").push(newWish);
+      db.ref("wishes").push(newWish);
       form.reset();
-      triggerConfetti();
     });
 
     db.ref("wishes").on("child_added", (snapshot) => {
@@ -179,29 +150,20 @@
       div.className = "reaction";
       let html = `<strong>${data.name}</strong>: ${data.message}`;
       if (data.mediaUrl) {
-        const isImg = data.mediaUrl.match(/\.(jpeg|jpg|gif|png)/);
-        const isAudio = data.mediaUrl.match(/\.(mp3|wav)/);
-        const isVideo = data.mediaUrl.match(/\.(mp4|webm)/);
-
-        if (isImg) html += `<br><img src="${data.mediaUrl}" style="max-width:150px; border-radius:6px;">`;
-        else if (isAudio) html += `<br><audio controls src="${data.mediaUrl}"></audio>`;
-        else if (isVideo) html += `<br><video controls width="150"><source src="${data.mediaUrl}"></video>`;
-        else html += `<br><a href="${data.mediaUrl}" target="_blank">View Attachment</a>`;
+        const url = data.mediaUrl;
+        if (url.match(/\.(jpeg|jpg|png|gif)$/i)) {
+          html += `<br><img src="${url}" style="max-width:150px; border-radius:6px;">`;
+        } else if (url.match(/\.(mp3|wav)$/i)) {
+          html += `<br><audio controls src="${url}"></audio>`;
+        } else if (url.match(/\.(mp4|webm)$/i)) {
+          html += `<br><video controls width="150"><source src="${url}"></video>`;
+        } else {
+          html += `<br><a href="${url}" target="_blank">View Attachment</a>`;
+        }
       }
       div.innerHTML = html;
       reactions.appendChild(div);
     });
-
-    // Simple confetti (floating hearts)
-    function triggerConfetti() {
-      for (let i = 0; i < 10; i++) {
-        const emoji = document.createElement("div");
-        emoji.className = "reaction";
-        emoji.textContent = ["❤️", "🎉", "💐", "😍", "💖"][Math.floor(Math.random() * 5)];
-        emoji.style.left = Math.random() * 90 + "%";
-        reactions.appendChild(emoji);
-      }
-    }
   </script>
 </body>
 </html>
